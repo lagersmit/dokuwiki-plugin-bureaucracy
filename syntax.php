@@ -10,8 +10,6 @@
  * @author     Adrian Lang <dokuwiki@cosmocode.de>
  */
 // must be run within Dokuwiki
-use dokuwiki\Utf8\PhpString;
-
 if(!defined('DOKU_INC')) die();
 
 /**
@@ -319,7 +317,7 @@ class syntax_plugin_bureaucracy extends DokuWiki_Syntax_Plugin {
                 $isValid = $field->handle_post($file, $data['fields'], $index, $this->form_id);
 
             } elseif($field->getFieldType() === 'fieldset' || !$field->hidden) {
-                $isValid = $field->handle_post($_POST['bureaucracy'][$index] ?? null, $data['fields'], $index, $this->form_id);
+                $isValid = $field->handle_post($_POST['bureaucracy'][$index], $data['fields'], $index, $this->form_id);
             }
 
             if(!$isValid) {
@@ -373,12 +371,12 @@ class syntax_plugin_bureaucracy extends DokuWiki_Syntax_Plugin {
      * @return string html of the form
      */
     private function _htmlform($fields) {
-        global $INFO;
+        global $ID;
 
         $form = new Doku_Form(array('class'   => 'bureaucracy__plugin',
                                     'id'      => 'bureaucracy__plugin' . $this->form_id,
                                     'enctype' => 'multipart/form-data'));
-        $form->addHidden('id', $INFO['id']);
+        $form->addHidden('id', $ID);
         $form->addHidden('bureaucracy[$$id]', $this->form_id);
 
         foreach($fields as $id => $field) {
@@ -413,7 +411,7 @@ class syntax_plugin_bureaucracy extends DokuWiki_Syntax_Plugin {
                             $escapedQuote = false;
                             continue;
                         }
-                        if($i + 1 < $len && $line[$i + 1] == '"') {
+                        if($line[$i + 1] == '"') {
                             $escapedQuote = true;
                             continue;
                         }
@@ -541,7 +539,9 @@ class syntax_plugin_bureaucracy extends DokuWiki_Syntax_Plugin {
         global $conf;
 
         //no 2nd argument for default date format
-        $match[2] = $match[2] ?? $conf['dformat'];
+        if($match[2] == null) {
+            $match[2] = $conf['dformat'];
+        }
 
         return strftime($match[2], strtotime($match[1]));
     }
@@ -554,7 +554,6 @@ class syntax_plugin_bureaucracy extends DokuWiki_Syntax_Plugin {
     function prepareNamespacetemplateReplacements() {
         /* @var Input $INPUT */
         global $INPUT;
-        global $INFO;
         global $USERINFO;
         global $conf;
         global $ID;
@@ -575,22 +574,21 @@ class syntax_plugin_bureaucracy extends DokuWiki_Syntax_Plugin {
         $this->patterns['__date__'] = '/@DATE@/';
 
         // replace placeholders
-        $localid = isset($INFO['id']) ? $INFO['id'] : $ID;
-        $file = noNS($localid);
+        $file = noNS($ID);
         $page = strtr($file, $conf['sepchar'], ' ');
-        $this->values['__formpage_id__'] = $localid;
-        $this->values['__formpage_ns__'] = getNS($localid);
-        $this->values['__formpage_curns__'] = curNS($localid);
+        $this->values['__formpage_id__'] = $ID;
+        $this->values['__formpage_ns__'] = getNS($ID);
+        $this->values['__formpage_curns__'] = curNS($ID);
         $this->values['__formpage_file__'] = $file;
-        $this->values['__formpage_!file__'] = PhpString::ucfirst($file);
-        $this->values['__formpage_!file!__'] = PhpString::strtoupper($file);
+        $this->values['__formpage_!file__'] = utf8_ucfirst($file);
+        $this->values['__formpage_!file!__'] = utf8_strtoupper($file);
         $this->values['__formpage_page__'] = $page;
-        $this->values['__formpage_!page__'] = PhpString::ucfirst($page);
-        $this->values['__formpage_!!page__'] = PhpString::ucwords($page);
-        $this->values['__formpage_!page!__'] = PhpString::strtoupper($page);
+        $this->values['__formpage_!page__'] = utf8_ucfirst($page);
+        $this->values['__formpage_!!page__'] = utf8_ucwords($page);
+        $this->values['__formpage_!page!__'] = utf8_strtoupper($page);
         $this->values['__user__'] = $INPUT->server->str('REMOTE_USER');
-        $this->values['__name__'] = $USERINFO['name'] ?? '';
-        $this->values['__mail__'] = $USERINFO['mail'] ?? '';
+        $this->values['__name__'] = $USERINFO['name'];
+        $this->values['__mail__'] = $USERINFO['mail'];
         $this->values['__date__'] = strftime($conf['dformat']);
     }
 
