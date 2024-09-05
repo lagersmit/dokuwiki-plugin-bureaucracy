@@ -1,7 +1,4 @@
 <?php
-
-use DOMWrap\Document;
-
 /**
  * @group plugin_bureaucracy
  * @group plugins
@@ -10,28 +7,17 @@ class syntax_plugin_bureaucracy_test extends DokuWikiTest {
 
     protected $pluginsEnabled = array('bureaucracy');
 
-    /** @inheritDoc */
-    public function setUp(): void
-    {
-        global $INFO;
-        $INFO['id'] = 'test:page';
-        parent::setUp();
-    }
-
-
     public function test_generalFormOutput() {
-
         $input = file_get_contents(dirname(__FILE__) . '/input.txt');
         $xhtml = p_render('xhtml', p_get_instructions($input), $info);
 
-        $doc = new Document();
-        $doc->loadHTML($xhtml);
+        $doc = phpQuery::newDocument($xhtml);
 
-        $this->assertEquals(1, $doc->find('form.bureaucracy__plugin')->count());
-        $this->assertEquals(6, $doc->find('form.bureaucracy__plugin fieldset')->count());
+        $this->assertEquals(1, pq('form.bureaucracy__plugin', $doc)->length);
+        $this->assertEquals(6, pq('form.bureaucracy__plugin fieldset', $doc)->length);
 
         // standard input types
-        $this->checkField($doc, 'Employee Name', 'input[type=text][value="Your Name"].edit', true);
+        $this->checkField($doc, 'Employee Name', 'input[type=text][value=Your Name].edit', true);
         $this->checkField($doc, 'Your Age', 'input[type=text].edit', true);
         $this->checkField($doc, 'Your E-Mail Address', 'input[type=text].edit', true);
         $this->checkField($doc, 'Occupation (optional)', 'input[type=text].edit');
@@ -39,16 +25,16 @@ class syntax_plugin_bureaucracy_test extends DokuWikiTest {
 
         // select field
         $select = $this->checkField($doc, 'Please select an option', 'select');
-        $this->assertEquals(3, $select->find('option')->count());
-        $this->assertEquals(1, $select->find('option:selected')->count());
-        $this->assertEquals('Peaches', $select->find('option:selected')->attr('value'));
+        $this->assertEquals(3, pq('option', $select)->length);
+        $this->assertEquals(1, pq('option:selected', $select)->length);
+        $this->assertEquals('Peaches', pq('option:selected', $select)->val());
 
         // static text
-        $this->assertEquals(1, $doc->find('p:contains(Some static text)')->count());
+        $this->assertEquals(1, pq('p:contains(Some static text)', $doc)->length);
 
         // checkbox
         $cb = $this->checkField($doc, 'Read the agreement?', 'input[type=checkbox][value=1]');
-        $this->assertEquals('1', $cb->parent()->find('input[type=hidden][value=0]')->count());
+        $this->assertEquals('1', pq('input[type=hidden][value=0]', $cb->parent())->length);
 
         // text area
         $this->checkField($doc, 'Tell me about your self', 'textarea.edit', true);
@@ -57,7 +43,7 @@ class syntax_plugin_bureaucracy_test extends DokuWikiTest {
         $this->checkField($doc, 'File1', 'input[type=file].edit', true);
 
         // submit button
-        $this->assertEquals(1, $doc->find('button[type=submit]:contains(Submit Query)')->count());
+        $this->assertEquals(1, pq('button[type=submit]:contains(Submit Query)')->length);
 
     }
 
@@ -65,36 +51,28 @@ class syntax_plugin_bureaucracy_test extends DokuWikiTest {
         $input = file_get_contents(dirname(__FILE__) . '/input.txt');
         $xhtml = p_render('xhtml', p_get_instructions($input), $info);
 
-        $doc = new Document();
-        $doc->loadHTML($xhtml);
+        $doc = phpQuery::newDocument($xhtml);
 
         // HTML Check - there should be no bold tag anywhere
-        $this->assertEquals(0, $doc->find('bold')->count());
+        $this->assertEquals(0, pq('bold', $doc)->length);
     }
 
-    /**
-     * @param Document $doc
-     * @param string $name Name of the field
-     * @param string $inputSelector Selector to find the input field in the label
-     * @param bool $required Is the field required?
-     * @return \DOMWrap\Element
-     */
-    private function checkField($doc, $name, $inputSelector, $required=false) {
+    private function checkField($doc, $name, $check, $required=false) {
 
-        $field = $doc->find('form.bureaucracy__plugin label span:contains("' . $name . '")');
-        $this->assertEquals(1, $field->count(), "$name span");
+        $field = pq('form.bureaucracy__plugin label span:contains(' . $name . ')', $doc);
+        $this->assertEquals(1, $field->length, "find span of $name");
 
         if($required){
-            $this->assertEquals(1, $field->find('sup')->count(), "$name is marked mandatory");
+            $this->assertEquals(1, pq('sup', $field)->length, "is mandatory of $name");
         }
 
         $label = $field->parent();
-        $this->assertTrue($label->is('label'), "$name is inside a label");
+        $this->assertTrue($label->is('label'), "find label of $name");
 
-        $input = $label->find($inputSelector);
-        $this->assertEquals(1, $input->count(), "$name input field");
+        $input = pq($check, $label);
+        $this->assertEquals(1, $input->length, "find check of $name");
 
-        return $input->get(0);
+        return $input;
     }
 
     public function test_parseline() {

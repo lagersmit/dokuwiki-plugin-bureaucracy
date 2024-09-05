@@ -1,8 +1,8 @@
 base    bureaucracy
-author  Andreas Gohr
-email   andi@splitbrain.org
-date    2023-05-16
+author  Andreas Gohr (forked by Gideon van de Laar @ Justspark)
+email   development@justspark.com
+date    2024-09-05
 name    Bureaucracy Plugin
 desc    Create forms and generate pages or emails from them
-url     https://www.dokuwiki.org/plugin:bureaucracy
+url     https://github.com/lagersmit/dokuwiki-plugin-bureaucracy
 

@@ -55,6 +55,8 @@ class action_plugin_bureaucracy extends DokuWiki_Action_Plugin {
             $users = array();
         }
 
-        echo json_encode($users);
+        require_once DOKU_INC . 'inc/JSON.php';
+        $json = new JSON();
+        echo $json->encode($users);
     }
 }

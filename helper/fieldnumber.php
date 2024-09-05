@@ -107,7 +107,7 @@ class helper_plugin_bureaucracy_fieldnumber extends helper_plugin_bureaucracy_fi
      * @return string
      */
     protected function addLeadingzeros(&$value) {
-        if (isset($this->opt['leadingzeros'])) {
+        if($this->opt['leadingzeros']) {
             $length = strlen($value);
             for($i = $length; $i < $this->opt['leadingzeros']; $i++) {
                 $value = '0' . $value;

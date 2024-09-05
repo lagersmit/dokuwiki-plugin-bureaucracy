@@ -1,7 +1,4 @@
 <?php
-
-use dokuwiki\File\PageResolver;
-
 /**
  * Simple template replacement action for the bureaucracy plugin
  *
@@ -26,8 +23,8 @@ class helper_plugin_bureaucracy_actiontemplate extends helper_plugin_bureaucracy
     public function run($fields, $thanks, $argv) {
         global $conf;
 
-        [$tpl, $this->pagename] = $argv;
-        $sep = $argv[2] ?? $conf['sepchar'];
+        list($tpl, $this->pagename, $sep) = $argv;
+        if(is_null($sep)) $sep = $conf['sepchar'];
 
         $this->patterns = array();
         $this->values   = array();
@@ -89,8 +86,10 @@ class helper_plugin_bureaucracy_actiontemplate extends helper_plugin_bureaucracy
             }
         }
 
-        $resolver = new PageResolver(getNS($ID));
-        $this->pagename = $resolver->resolveId($this->replace($this->pagename));
+        $this->pagename = $this->replace($this->pagename);
+
+        $myns = getNS($ID);
+        resolve_pageid($myns, $this->pagename, $ignored); // resolve relatives
 
         if ($this->pagename === '') {
             throw new Exception($this->getLang('e_pagename'));
@@ -109,14 +108,13 @@ class helper_plugin_bureaucracy_actiontemplate extends helper_plugin_bureaucracy
 
         foreach ($fields as $field) {
             if (!is_null($field->getParam('page_tpl')) && !is_null($field->getParam('page_tgt')) ) {
-                $resolver = new PageResolver($ns);
-
                 //template
                 $templatepage = $this->replace($field->getParam('page_tpl'));
-                $templatepage = $resolver->resolveId($templatepage);
+                resolve_pageid(getNS($ID), $templatepage, $ignored);
 
                 //target
-                $relativetargetpage = $resolver->resolveId($field->getParam('page_tgt'));
+                $relativetargetpage = $field->getParam('page_tgt');
+                resolve_pageid($ns, $relativeTargetPageid, $ignored);
                 $targetpage = "$this->pagename:$relativetargetpage";
 
                 $auth = $this->aclcheck($templatepage); // runas
@@ -178,13 +176,12 @@ class helper_plugin_bureaucracy_actiontemplate extends helper_plugin_bureaucracy
             $tpl = $this->replace($tpl);
 
             // resolve templates, but keep references to whole namespaces intact (ending in a colon)
-            $resolver = new PageResolver(getNS($ID));
             if(substr($tpl, -1) == ':') {
                 $tpl = $tpl.'xxx'; // append a fake page name
-                $tpl = $resolver->resolveId($tpl);
+                resolve_pageid(getNS($ID), $tpl, $ignored);
                 $tpl = substr($tpl, 0, -3); // cut off fake page name again
             } else {
-                $tpl = $resolver->resolveId($tpl);
+                resolve_pageid(getNS($ID), $tpl, $ignored);
             }
 
             $backup = array();
@@ -347,16 +344,14 @@ class helper_plugin_bureaucracy_actiontemplate extends helper_plugin_bureaucracy
                     $last_folder[$n] = array(
                         'id' => substr($ID, 0, strpos($ID, ':', ($n > 0 ? strlen($last_folder[$n - 1]['id']) : 0) + 1) + 1),
                         'level' => $n + 1,
-                        'open' => 1,
-                        'type' => null,
+                        'open' => 1
                     );
                     $data[] = $last_folder[$n];
                 }
             }
             $data[] = array('id' => $ID, 'level' => 1 + substr_count($ID, ':'), 'type' => 'f');
         }
-        $index = new dokuwiki\Ui\Index();
-        $html .= html_buildlist($data, 'idx', array($this, 'html_list_index'), array($index, 'tagListItem'));
+        $html .= html_buildlist($data, 'idx', array($this, 'html_list_index'), 'html_li_index');
 
         // Add indexer bugs for every just-created page
         $html .= '<div class="no">';
